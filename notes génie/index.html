@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mes Notes de Génie Électrique</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
+    h1 { color: darkblue; }
+    textarea { width: 100%; height: 120px; margin-top: 10px; }
+    button { margin-top: 5px; padding: 5px 10px; }
+    ul { margin-top: 5px; padding-left: 0; }
+    li { margin-bottom: 5px; list-style-type: none; }
+    select, input { margin: 5px 0; padding: 3px; }
+    .note-item { display: flex; justify-content: space-between; align-items: center; }
+    .note-item button { margin-left: 5px; }
+    .partie-title { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Mes Notes de Génie Électrique</h1>
+
+  <div>
+    <label for="matiere">Matière :</label>
+    <select id="matiere">
+      <option value="Électrotechnique">Électrotechnique</option>
+      <option value="Électronique">Électronique</option>
+      <option value="Automatiques">Automatiques</option>
+      <option value="Informatiques Industrielles">Informatiques Industrielles</option>
+      <option value="Télécommunications">Télécommunications</option>
+    </select>
+  </div>
+
+  <div>
+    <label for="partieInput">Nouvelle partie :</label>
+    <input type="text" id="partieInput" placeholder="Nom de la partie">
+    <button id="addPartieBtn">Ajouter partie</button>
+  </div>
+
+  <div>
+    <label for="partieSelect">Choisir la partie :</label>
+    <select id="partieSelect"></select>
+  </div>
+
+  <textarea id="noteInput" placeholder="Écris ta note ici..."></textarea>
+  <button id="addNoteBtn">Ajouter note</button>
+
+  <h2>Notes :</h2>
+  <div id="notesContainer"></div>
+  <script>
+    // 🔹 VARIABLES DOM 🔹
+    const matiereSelect = document.getElementById('matiere');
+    const partieInput = document.getElementById('partieInput');
+    const addPartieBtn = document.getElementById('addPartieBtn');
+    const partieSelect = document.getElementById('partieSelect');
+    const noteInput = document.getElementById('noteInput');
+    const addNoteBtn = document.getElementById('addNoteBtn');
+    const notesContainer = document.getElementById('notesContainer');
+
+    // 🔹 FONCTIONS 🔹
+    async function loadParties() {
+      partieSelect.innerHTML = '';
+      const matiere = matiereSelect.value;
+      const docRef = db.collection('notes').doc(matiere);
+      const doc = await docRef.get();
+      const data = doc.exists ? doc.data() : {};
+      for (let partie in data) {
+        const option = document.createElement('option');
+        option.value = partie;
+        option.textContent = partie;
+        partieSelect.appendChild(option);
+      }
+      displayNotes();
+    }
+
+    async function displayNotes() {
+      notesContainer.innerHTML = '';
+      const matiere = matiereSelect.value;
+      const docRef = db.collection('notes').doc(matiere);
+      const doc = await docRef.get();
+      const data = doc.exists ? doc.data() : {};
+
+      for (let partie in data) {
+        const divPartie = document.createElement('div');
+        divPartie.className = 'partie-title';
+
+        const h3 = document.createElement('h3');
+        h3.textContent = partie;
+        divPartie.appendChild(h3);
+
+        const deletePartieBtn = document.createElement('button');
+        deletePartieBtn.textContent = 'Supprimer partie';
+        deletePartieBtn.onclick = async () => {
+          if(confirm(`Supprimer la partie "${partie}" ?`)) {
+            delete data[partie];
+            await db.collection('notes').doc(matiere).set(data);
+            loadParties();
+          }
+        };
+        divPartie.appendChild(deletePartieBtn);
+        notesContainer.appendChild(divPartie);
+
+        const ul = document.createElement('ul');
+        data[partie].forEach((note, idx) => {
+          const li = document.createElement('li');
+          li.className = 'note-item';
+          li.textContent = note;
+
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'Modifier';
+          editBtn.onclick = async () => {
+            const newNote = prompt('Modifier la note :', note);
+            if(newNote && newNote.trim() !== '') {
+              data[partie][idx] = newNote.trim();
+              await db.collection('notes').doc(matiere).set(data);
+              displayNotes();
+            }
+          };
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = 'Supprimer';
+          deleteBtn.onclick = async () => {
+            data[partie].splice(idx,1);
+            await db.collection('notes').doc(matiere).set(data);
+            displayNotes();
+          };
+
+          li.appendChild(editBtn);
+          li.appendChild(deleteBtn);
+          ul.appendChild(li);
+        });
+        notesContainer.appendChild(ul);
+      }
+    }
+
+    // Ajouter une partie
+    addPartieBtn.addEventListener('click', async () => {
+      const matiere = matiereSelect.value;
+      const partie = partieInput.value.trim();
+      if(!partie) return alert("Nom de partie vide");
+
+      const docRef = db.collection('notes').doc(matiere);
+      const doc = await docRef.get();
+      const data = doc.exists ? doc.data() : {};
+      if(data[partie]) return alert("Cette partie existe déjà !");
+      data[partie] = [];
+      await docRef.set(data);
+      partieInput.value = '';
+      loadParties();
+    });
+
+    // Ajouter une note
+    addNoteBtn.addEventListener('click', async () => {
+      const matiere = matiereSelect.value;
+      const partie = partieSelect.value;
+      const note = noteInput.value.trim();
+      if(!note) return alert("La note est vide");
+
+      const docRef = db.collection('notes').doc(matiere);
+      const doc = await docRef.get();
+      const data = doc.exists ? doc.data() : {};
+      if(!data[partie]) data[partie] = [];
+      data[partie].push(note);
+      await docRef.set(data);
+      noteInput.value = '';
+      displayNotes();
+    });
+
+    matiereSelect.addEventListener('change', loadParties);
+
+    // Initialisation
+    loadParties();
+  </script>
+</body>
+</html>

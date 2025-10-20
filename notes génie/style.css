@@ -1,0 +1,34 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+}
+h1 { color: darkblue; }
+textarea {
+    width: 100%;
+    height: 120px;
+    margin-top: 10px;
+}
+button {
+    margin-top: 5px;
+    padding: 5px 10px;
+}
+ul { margin-top: 5px; }
+li { margin-bottom: 5px; }
+select, input {
+    margin: 5px 0;
+    padding: 3px;
+}
+.note-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.note-item button {
+    margin-left: 5px;
+}
+.partie-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
